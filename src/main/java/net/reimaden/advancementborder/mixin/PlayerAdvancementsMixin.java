@@ -5,7 +5,7 @@ import com.llamalad7.mixinextras.sugar.ref.LocalBooleanRef;
 import com.llamalad7.mixinextras.sugar.ref.LocalDoubleRef;
 import net.minecraft.advancements.AdvancementHolder;
 import net.minecraft.advancements.DisplayInfo;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.PlayerAdvancements;
 import net.minecraft.server.level.ServerPlayer;
@@ -45,22 +45,22 @@ public abstract class PlayerAdvancementsMixin {
             return;
         }
 
-        ResourceLocation advancement = holder.id();
+        Identifier advancement = holder.id();
         String[] advancements = AdvancementBorder.config.advancementWhitelist;
         // If the whitelist is not empty, check if the awarded advancement is in the whitelist
         if (advancements.length > 0) {
             if (!AdvancementBorder.config.invertList) {
-                if (Arrays.stream(advancements).noneMatch(resourceLocation -> ResourceLocation.parse(resourceLocation).equals(advancement))) {
+                if (Arrays.stream(advancements).noneMatch(resourceLocation -> Identifier.parse(resourceLocation).equals(advancement))) {
                     return; // Return early since the awarded advancement is not whitelisted
                 }
             } else {
-                if (Arrays.stream(advancements).anyMatch(resourceLocation -> ResourceLocation.parse(resourceLocation).equals(advancement))) {
+                if (Arrays.stream(advancements).anyMatch(resourceLocation -> Identifier.parse(resourceLocation).equals(advancement))) {
                     return; // Return early since the awarded advancement is blacklisted
                 }
             }
         }
 
-        MinecraftServer server = this.player.getServer();
+        MinecraftServer server = this.player.level().getServer();
         if (server == null) return;
 
         StateSaverAndLoader serverState = StateSaverAndLoader.getServerState(server);
