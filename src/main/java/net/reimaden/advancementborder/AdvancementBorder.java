@@ -12,9 +12,14 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.players.PlayerList;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.border.WorldBorder;
+import net.minecraft.world.level.dimension.DimensionType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public final class AdvancementBorder implements ModInitializer {
     public static final String MOD_ID = "advancementborder";
@@ -45,28 +50,81 @@ public final class AdvancementBorder implements ModInitializer {
         serverState.setDirty();
 
         if (config.worldBorderSetup.automate) {
-            WorldBorder border = level.getWorldBorder();
-            // Set size according to the config
+            ServerLevel overworld = server.overworld();
+            BlockPos spawn = overworld.getLevelData().getRespawnData().pos();
+
             double initialSize = config.worldBorderSetup.initialSize;
-            border.setSize(initialSize);
-            // Center on world spawn, with a 0.5 offset if the size is odd
-            BlockPos pos = level.getLevelData().getRespawnData().pos();
-            double centerX = pos.getX();
-            double centerZ = pos.getZ();
-            if (initialSize % 2 != 0) { // Check if size is odd
-                centerX += 0.5;
-                centerZ += 0.5;
+            double offset = initialSize % 2 != 0 ? 0.5 : 0.0;
+            double overworldCenterX = spawn.getX() + offset;
+            double overworldCenterZ = spawn.getZ() + offset;
+
+            List<ServerLevel> levels = enabledLevels(server);
+
+            for (ServerLevel target : levels) {
+                double centerX;
+                double centerZ;
+
+                if (target.dimension().equals(Level.END)) {
+                    BlockPos arrival = ServerLevel.END_SPAWN_POINT;
+                    centerX = arrival.getX() + offset;
+                    centerZ = arrival.getZ() + offset;
+                } else {
+                    double scale = DimensionType.getTeleportationScale(
+                            overworld.dimensionType(), target.dimensionType()
+                    );
+                    centerX = overworldCenterX * scale;
+                    centerZ = overworldCenterZ * scale;
+                }
+
+                WorldBorder border = target.getWorldBorder();
+                border.setCenter(centerX, centerZ);
+                border.setSize(initialSize);
             }
-            border.setCenter(centerX, centerZ);
-            // Prevent the player from spawning outside the border
-            if (border.getDistanceToBorder(player) < 0.0) {
-                LOGGER.debug("Player spawned outside the world border! {} {} {}",
-                        player.getX(), player.getY(), player.getZ());
-                player.teleportTo(centerX, pos.getY(), centerZ);
+
+            // Keep the existing correction for the first Overworld spawn.
+            if (level == overworld && levels.contains(overworld)) {
+                WorldBorder border = overworld.getWorldBorder();
+                if (border.getDistanceToBorder(player) < 0.0) {
+                    player.teleportTo(overworldCenterX, spawn.getY(), overworldCenterZ);
+                }
             }
-            // Send a message to inform the first player who joined
-            sendNotification(server.getPlayerList(), ".setup");
+
+            if (!levels.isEmpty()) {
+                sendNotification(server.getPlayerList(), ".setup");
+            }
         }
+    }
+
+    private static List<ServerLevel> enabledLevels(MinecraftServer server) {
+        List<ServerLevel> levels = new ArrayList<>();
+        if (config.dimensions.overworld) {
+            levels.add(server.overworld());
+        }
+
+        ServerLevel nether = server.getLevel(Level.NETHER);
+        if (config.dimensions.nether && nether != null) {
+            levels.add(nether);
+        }
+
+        ServerLevel end = server.getLevel(Level.END);
+        if (config.dimensions.end && end != null) {
+            levels.add(end);
+        }
+        return levels;
+    }
+
+    public static boolean expandBorders(MinecraftServer server, double increase) {
+        List<ServerLevel> levels = enabledLevels(server);
+        if (levels.isEmpty()) {
+            return false;
+        }
+
+        // Use the first enabled dimension as the reference width.
+        double newSize = levels.getFirst().getWorldBorder().getSize() + increase;
+        for (ServerLevel level : levels) {
+            level.getWorldBorder().setSize(newSize);
+        }
+        return true;
     }
 
     public static void sendNotification(PlayerList playerList, String key, Object... args) {

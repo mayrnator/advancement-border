@@ -58,6 +58,23 @@ public final class AdvancementBorderConfig {
     @Configurable
     public WorldBorderSetup worldBorderSetup = new WorldBorderSetup();
 
+    @Configurable
+    public Dimensions dimensions = new Dimensions();
+
+    public static class Dimensions {
+        @Configurable
+        @Configurable.Comment("Manage the Overworld border")
+        public boolean overworld = true;
+
+        @Configurable
+        @Configurable.Comment("Manage the Nether border")
+        public boolean nether = true;
+
+        @Configurable
+        @Configurable.Comment("Manage the End border")
+        public boolean end = true;
+    }
+
     public static class WorldBorderSetup {
         @Configurable(key = Configurable.LocalizationKey.FULL)
         @Configurable.Comment(value = {"Let " + AdvancementBorder.MOD_NAME + " handle setting up the world border for new worlds", "This sets the size of the world border and centers it on the world spawn"}, localize = true)

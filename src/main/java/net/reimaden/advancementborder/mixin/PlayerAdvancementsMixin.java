@@ -10,7 +10,6 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.PlayerAdvancements;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.players.PlayerList;
-import net.minecraft.world.level.border.WorldBorder;
 import net.reimaden.advancementborder.AdvancementBorder;
 import net.reimaden.advancementborder.StateSaverAndLoader;
 import org.spongepowered.asm.mixin.Final;
@@ -82,9 +81,9 @@ public abstract class PlayerAdvancementsMixin {
         };
         if (increase <= 0) return;
 
-        // Setting the border in the Nether or the End doesn't work
-        WorldBorder border = server.overworld().getWorldBorder();
-        border.setSize(border.getSize() + increase);
+        if (!AdvancementBorder.expandBorders(server, increase)) {
+            return;
+        }
 
         booleanRef.set(true);
         doubleRef.set(increase);
