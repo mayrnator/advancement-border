@@ -21,6 +21,11 @@ public final class AdvancementBorderConfig {
     @Configurable.DecimalRange(min = 0.0, max = 1000.0)
     public double increaseAmountChallenge = 2.0;
 
+    @Configurable
+    @Configurable.Comment("Border expansion duration in seconds. 0 makes expansion instant")
+    @Configurable.DecimalRange(min = 0.0, max = 60.0)
+    public double expansionDurationSeconds = 1.0;
+
     public enum NotificationStyle {
         CHAT,
         ACTION_BAR,

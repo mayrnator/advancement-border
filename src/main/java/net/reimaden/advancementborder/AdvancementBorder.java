@@ -119,10 +119,20 @@ public final class AdvancementBorder implements ModInitializer {
             return false;
         }
 
-        // Use the first enabled dimension as the reference width.
-        double newSize = levels.getFirst().getWorldBorder().getSize() + increase;
+        // Include any growth still pending from an earlier advancement.
+        WorldBorder reference = levels.getFirst().getWorldBorder();
+        double newSize = reference.getLerpTarget() + increase;
+        long durationTicks = Math.round(config.expansionDurationSeconds * 20.0);
+
         for (ServerLevel level : levels) {
-            level.getWorldBorder().setSize(newSize);
+            WorldBorder border = level.getWorldBorder();
+            if (durationTicks <= 0) {
+                border.setSize(newSize);
+            } else {
+                border.lerpSizeBetween(
+                        border.getSize(), newSize, durationTicks, level.getGameTime()
+                );
+            }
         }
         return true;
     }
